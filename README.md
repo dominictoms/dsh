@@ -16,7 +16,7 @@ As of right now there is no real reason to use dsh. This project mainly exists f
 Many global variables can be modified in the `config.h` header file, such as default parameters, file paths and environment variables.
 ```c
 // default values
-#define DEFAULT_PROMPT VERSION "$"
+#define DEFAULT_PROMPT VERSION "$ "
 #define DEFAULT_HIST_LEN 100
 
 // environment variable names
@@ -32,14 +32,14 @@ Many global variables can be modified in the `config.h` header file, such as def
 ### Environment Variables
 dsh will read environment variables and use them as overrides to the default preferences set in the configuration file. For example, if you wanted to use a different prompt, you can simply set the `DSHHPROMPT` variable.
 ```
-dsh 0.1$ DSHPROMPT="cool prompt$ "
-cool prompt$ unset DSHPROMPT
+dsh 0.1$ DSHPROMPT="cool_prompt$ "
+cool_prompt$ unset DSHPROMPT
 dsh 0.1$
 ```
 
 ## Building
 ### Compiling dsh
 dsh can be compiled through more or less any C compiler such as Clang or GCC.
-```sh
+```
 dsh 0.1$ gcc dsh.c
 ```
