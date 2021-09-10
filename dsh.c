@@ -4,17 +4,53 @@
 #include <unistd.h> 
 #include <sys/wait.h>
 
-#define version "0.1"
+#define VERSION "dsh 0.1"
 
 #include "config.h"
+#include "cd.h"
+#include "exit.h"
+#include "unset.h"
+
+// struct for calling shell  methods
+const static struct
+{
+	const char *argv;
+	void (*method)(int, char**);
+}
+
+// map of shell methods
+methodMap[] =
+{
+	{"cd", dshcd},
+	{"exit", dshexit},
+	{"unset", dshunset},
+};
+
+int runShellMethod(int argc, char **argv)
+{
+	// loop through method map
+	for (int i = 0; i < (sizeof(methodMap) / sizeof(methodMap[0])); i++)
+	{
+		// if method
+		if (!strcmp(methodMap[i].argv, argv[0]) && methodMap[i].method)
+		{
+			// call method and return
+	        methodMap[i].method(argc, argv);
+			return 1;
+		}
+	}
+
+	// otherwise return
+	return 0;
+}
 
 int getHistLen()
 {
 	// int to store history length
-	int histLen = DEFAULTHISTLEN;
+	int histLen = DEFAULT_HIST_LEN;
 
 	// char to store history length env var
-	char *histLenString = getenv(HISTLENVAR);
+	char *histLenString = getenv(HIST_LEN_VAR);
 
 	// set length as env variable if it exists
 	if (histLenString)
@@ -28,12 +64,12 @@ int getHistLen()
 char *getPrompt()
 {
 	// store prompt from env variable
-	char *prompt = getenv(PROMPTVAR);
+	char *prompt = getenv(PROMPT_VAR);
 
 	// use default prompt if doesn't exist
 	if (!prompt)
 	{
-		prompt = DEFAULTPROMPT;
+		prompt = DEFAULT_PROMPT;
 	}
 
 	return prompt;
@@ -42,10 +78,19 @@ char *getPrompt()
 void exec(char *input)
 {
 	// int to loop through input string
-	int index = 0;
+	int argc = 0;
+
+	// int to store total quotation marks
+	int quotes = 0;
+
+	// int to store total quoted strings
+	int totalQuotes = 0;
 
 	// array to store argument list
-	char *argv[ARGLEN];
+	char *argv[ARG_LEN];
+
+	// array to store quoted arguments
+	char argvConcat[ARG_LEN][ARG_LEN];
 
 	// char to split input string at
 	char delim[] = " ";
@@ -53,18 +98,105 @@ void exec(char *input)
 	// first split
 	char *ptr = strtok(input, delim);
 
+	// buffer to store concat strings
+	char buffer[ARG_LEN] = "";
+
 	// loop through the string
 	while (ptr != NULL)
 	{
-		// add current split to array
-		argv[index++] = ptr;
+		// if quotation marks
+		for (int i = 0; i < strlen(ptr); i++)
+		{
+			// if char is quotation mark
+			if (ptr[i] == '"')
+			{
+				// increase quote counter
+				quotes++;
 
-		// split it again
-		ptr = strtok(NULL, delim);
+				// remove quote
+				memmove(&ptr[i], &ptr[i + 1], strlen(ptr) - i);
+
+				// decrease index
+				i--;
+			}
+		}
+
+		// open quote
+		if (quotes == 1)
+		{
+			// add split to buffer
+			strcat(buffer, ptr);
+
+			// add space to buffer
+			strcat(buffer, " ");
+
+			// continue loop
+			ptr = strtok(NULL, delim);
+		}
+
+		// closed quote
+		else if (quotes == 2)
+		{
+			// add split to buffer
+			strcat(buffer, ptr);
+
+			strcpy(argvConcat[totalQuotes], buffer);
+
+			// add quoted text to array
+			argv[argc++] = argvConcat[totalQuotes];
+
+			// reset quote counter
+			quotes = 0;
+			totalQuotes++;
+
+			// clear the buffer
+			strcpy(buffer, "");
+
+			// split it again
+			ptr = strtok(NULL, delim);
+		}
+
+		// no quotes
+		else
+		{
+			// add current split to array
+			argv[argc++] = ptr;
+
+			// split it again
+			ptr = strtok(NULL, delim);
+		}
+	}
+
+	// check if env variable
+	if (strchr(argv[0], '=') != NULL)
+	{
+		// array to store variable
+		char *envvar[1];
+
+		// get the env variable name
+		char *token = strtok(argv[0], "=");
+		envvar[0] = token;
+
+		// get the env variable value
+		token = strtok(NULL, "=");
+		envvar[1] = token;
+
+		// set env variable
+		setenv(envvar[0], envvar[1], -1);
+
+		return;	
+	}
+
+	// check for shell methods
+	if (runShellMethod(argc, argv))
+	{
+		// run shell method instead
+		return;
 	}
 
 	// add null to end of arguments list
-	argv[index++] = NULL;
+	//strcpy(argv[argc++], NULL);
+	argv[argc++] = NULL;
 
 	// fork process
 	pid_t pid = fork();
@@ -92,10 +224,10 @@ void updateHist(char *input)
 	FILE *histFile;
 
 	// string to store history file path
-	char filePath[DIRLEN];
+	char filePath[DIR_LEN];
 
 	// get history file path
-	strcat(strcpy(filePath, getenv("HOME")), "/" HISTFILENAME);
+	strcat(strcpy(filePath, getenv("HOME")), "/" HIST_FILE_NAME);
 
 	// open the history file to read and append
 	histFile = fopen(filePath, "a+");
@@ -138,7 +270,7 @@ void updateHist(char *input)
 		FILE *tempHistFile;
 
 		// string to store temporary history file path
-		char tempFilePath[DIRLEN] = TEMPFILEDIR "/" TEMPHISTFILENAME;
+		char tempFilePath[DIR_LEN] = TEMP_FILE_DIR "/" TEMP_HIST_FILE_NAME;
 
 		// open the temp history file to append
 		tempHistFile = fopen(tempFilePath, "w");
@@ -190,7 +322,7 @@ void updateHist(char *input)
 void getInput()
 {
 	// char array to store input
-	char input[INPUTLEN];
+	char input[INPUT_LEN];
  
 	// display prompt
 	printf("%s", getPrompt());

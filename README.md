@@ -2,9 +2,9 @@
 
 ## Introduction
 ### What is dsh?
-dsh is a basic shell for Unix and Unix-like operating systems written in C. The goal of dsh is to create a lightweight, portable and eventually POSIX compliant shell similar to Bash or Zsh.
-```sh
-dsh 0.1$ echo hello, world!
+dsh is a basic shell for Unix and Unix-like operating systems written in C. The goal of dsh is to create a lightweight, portable and eventually POSIX compliant shell similar to Bash or Zsh. 
+```
+dsh 0.1$ echo "hello, world!"
 hello, world!
 ```
 
@@ -16,28 +16,30 @@ As of right now there is no real reason to use dsh. This project mainly exists f
 Many global variables can be modified in the `config.h` header file, such as default parameters, file paths and environment variables.
 ```c
 // default values
-#define DEFAULTPROMPT "dsh " version "$ "
-#define DEFAULTHISTLEN 100
+#define DEFAULT_PROMPT VERSION "$"
+#define DEFAULT_HIST_LEN 100
 
-// environment variables
-#define PROMPTVAR "DSHPROMPT"
-#define HISTLENVAR "DSHHISTORYLEN"
+// environment variable names
+#define PROMPT_VAR "DSHPROMPT"
+#define HIST_LEN_VAR "DSHHISTORYLEN"
 
 // local files
-#define HISTFILENAME ".dshhistory"
-#define TEMPHISTFILENAME ".tempdshhistory"
-#define TEMPFILEDIR "/var/tmp"
+#define HIST_FILE_NAME ".dshhistory"
+#define TEMP_HIST_FILE_NAME ".tempdshhistory"
+#define TEMP_FILE_DIR "/var/tmp"
 ```
 
 ### Environment Variables
-dsh will read environment variables and use them as overrides to the default preferences set in the configuration file. For example, if you wanted to increase the amount of commands stored in the dsh history file, you can simply set the `DSHHISTORYLENGTH` variable.
-```sh
-$ export DSHHISTORYLENGTH=1000
+dsh will read environment variables and use them as overrides to the default preferences set in the configuration file. For example, if you wanted to use a different prompt, you can simply set the `DSHHPROMPT` variable.
+```
+dsh 0.1$ DSHPROMPT="cool prompt$ "
+cool prompt$ unset DSHPROMPT
+dsh 0.1$
 ```
 
 ## Building
 ### Compiling dsh
 dsh can be compiled through more or less any C compiler such as Clang or GCC.
 ```sh
-$ gcc dsh.c
+dsh 0.1$ gcc dsh.c
 ```
